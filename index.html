@@ -9,16 +9,38 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin=""/>
+  <!-- MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
   
   <style>
     body { margin: 0; padding: 0; }
     #map { width: 100%; height: 100vh; }
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.3);
+    }
   </style>
 </head>
 <body>
+<div id="controls">
+  <h3>Search by Date Range</h3>
+  <label for="startDate">Start Date:</label>
+  <input type="date" id="startDate" name="startDate">
+  <br>
+  <label for="endDate">End Date:</label>
+  <input type="date" id="endDate" name="endDate">
+  <br>
+  <button id="searchBtn">Search</button>
+</div>
 <div id="map"></div>
 
-  
 <!-- Include the config file -->
 <script src="config.js"></script>
 
@@ -26,6 +48,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
+<!-- Include MarkerCluster JS -->
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <script>
   // Set up the map view roughly between the two fixed markers.
@@ -38,41 +62,80 @@
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
-  // Options to keep the popups open.
+  // Define custom icons for the two initial markers.
+  var calgaryIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+    shadowUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+  });
+
+  var universityIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+    shadowUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+  });
+
+  // Options for popups.
   var popupOptions = {
-    autoClose: false,
-    closeOnClick: false
+    autoClose: true,
+    closeOnClick: true
   };
 
-  // Marker for the center of Calgary.
+  // Create initial markers for Calgary Center and Engineering Block D with custom icons.
   var centerCalgaryCoords = [51.0447, -114.0719];
-  var markerCenter = L.marker(centerCalgaryCoords).addTo(map);
+  var markerCenter = L.marker(centerCalgaryCoords, {icon: calgaryIcon}).addTo(map);
   markerCenter.bindPopup("<b>Calgary Center</b><br>This is the center of Calgary.", popupOptions).openPopup();
 
-  // Marker for Engineering Block D, University of Calgary.
   var engineeringBlockDCoords = [51.080534, -114.132604];
-  var markerEng = L.marker(engineeringBlockDCoords).addTo(map);
+  var markerEng = L.marker(engineeringBlockDCoords, {icon: universityIcon}).addTo(map);
   markerEng.bindPopup("<b>Engineering Block D</b><br>University of Calgary", popupOptions).openPopup();
 
-  // Show a popup when the map is clicked.
-  var clickPopup = L.popup();
-  map.on('click', function(e) {
-    clickPopup
-      .setLatLng(e.latlng)
-      .setContent("You clicked the map at " + e.latlng.toString())
-      .openOn(map);
-  });
-  
-    const config = {
-      baseUrl: "https://data.calgary.ca/resource/c2es-76ed.geojson",
-      appToken: window.APP_TOKEN,
-      limit: 50
-    };
-  
+  // Global variable to store the MarkerClusterGroup so we can refresh permit data.
+  var permitsLayer;
+  // Variable to hold the highlight marker for the identify feature.
+  var highlightLayer;
+
+  // Configuration for data retrieval.
+  const config = {
+    baseUrl: "https://data.calgary.ca/resource/c2es-76ed.geojson",
+    appToken: window.APP_TOKEN,
+    limit: 5000
+  };
+
+  // Function to load permit data with an optional date range filter.
+  function loadData(startDate, endDate) {
+    // If search parameters are provided, remove the initial markers.
+    if (startDate && endDate) {
+      if (markerCenter) {
+        map.removeLayer(markerCenter);
+      }
+      if (markerEng) {
+        map.removeLayer(markerEng);
+      }
+    }
+
+    // Remove existing permit layer if it exists.
+    if (permitsLayer) {
+      map.removeLayer(permitsLayer);
+    }
+
     const url = new URL(config.baseUrl);
     url.searchParams.append("$limit", config.limit);
     url.searchParams.append("$$app_token", config.appToken);
-  
+
+    // If both startDate and endDate are provided, add a $where clause.
+    if (startDate && endDate) {
+      // Construct the where clause. Assuming issueddate is stored in ISO format.
+      const whereClause = "issueddate >= '" + startDate + "T00:00:00' AND issueddate <= '" + endDate + "T23:59:59'";
+      url.searchParams.append("$where", whereClause);
+    }
+
     fetch(url)
       .then(response => {
         if (!response.ok) {
@@ -81,28 +144,73 @@
         return response.json();
       })
       .then(data => {
-        alert("Retrieved " + data.length + " records from the dataset!");
+        // Determine record count (data is a FeatureCollection).
+        let recordCount = data.features ? data.features.length : data.length;
+        alert("Retrieved " + recordCount + " records from the dataset!");
         console.log(data);
         
-        // Add the GeoJSON layer to the map.
-        L.geoJSON(data, {
-          onEachFeature: function(feature, layer) {
+        // Create a MarkerClusterGroup for the permit markers.
+        permitsLayer = L.markerClusterGroup();
+
+        // Create a GeoJSON layer and add markers to it.
+        var geojsonLayer = L.geoJSON(data, {
+          pointToLayer: function(feature, latlng) {
+            var marker = L.marker(latlng);
             if (feature.properties) {
-              const popupContent = `
+              var popupContent = `
                 <b>Issued Date:</b> ${feature.properties.issueddate}<br>
                 <b>Work Class Group:</b> ${feature.properties.workclassgroup}<br>
                 <b>Contractor Name:</b> ${feature.properties.contractorname}<br>
                 <b>Community Name:</b> ${feature.properties.communityname}<br>
                 <b>Original Address:</b> ${feature.properties.originaladdress}
               `;
-              layer.bindPopup(popupContent);
+              marker.bindPopup(popupContent, popupOptions);
             }
+            // Add click event for the identify feature.
+            marker.on('click', function(e) {
+              if (highlightLayer) {
+                map.removeLayer(highlightLayer);
+              }
+              highlightLayer = L.circleMarker(e.latlng, { radius: 10, color: 'red' }).addTo(map);
+              marker.openPopup();
+            });
+            return marker;
           }
-        }).addTo(map);
+        });
+        // Add the GeoJSON layer to the marker cluster group.
+        permitsLayer.addLayer(geojsonLayer);
+        // Add the marker cluster group to the map.
+        map.addLayer(permitsLayer);
       })
       .catch(error => {
         console.error("Error fetching data:", error);
       });
-  </script>
+  }
+
+  // Initially, no permit data is loaded.
+  // The initial view shows only the Calgary Center and University markers.
+
+  // Search button event listener for date range search.
+  document.getElementById("searchBtn").addEventListener("click", function() {
+    var startDate = document.getElementById("startDate").value;
+    var endDate = document.getElementById("endDate").value;
+
+    if (!startDate || !endDate) {
+      alert("Please enter both start and end dates.");
+      return;
+    }
+    loadData(startDate, endDate);
+  });
+
+  // Optional: Show a popup when the map is clicked (outside any features).
+  map.on('click', function(e) {
+    if (!e.originalEvent._stopped) {
+      L.popup()
+        .setLatLng(e.latlng)
+        .setContent("You clicked the map at " + e.latlng.toString())
+        .openOn(map);
+    }
+  });
+</script>
 </body>
 </html>
