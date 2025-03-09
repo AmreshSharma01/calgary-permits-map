@@ -104,8 +104,7 @@
   // Configuration for data retrieval.
   const config = {
     baseUrl: "https://data.calgary.ca/resource/c2es-76ed.geojson",
-    appToken: window.APP_TOKEN,
-    limit: 5000
+    limit: 1000
   };
 
   // Function to load permit data with an optional date range filter.
@@ -127,8 +126,6 @@
 
     const url = new URL(config.baseUrl);
     url.searchParams.append("$limit", config.limit);
-    url.searchParams.append("$$app_token", config.appToken);
-
     // If both startDate and endDate are provided, add a $where clause.
     if (startDate && endDate) {
       // Construct the where clause. Assuming issueddate is stored in ISO format.
