@@ -4,6 +4,10 @@
 
 This project is a geoweb application built using Leaflet.js that visualizes Calgary's building permits data. It integrates the City of Calgary’s Open Data API to fetch building permit information as GeoJSON and displays the data on an interactive map. Users can search for permits by specifying a date range and view detailed permit information by clicking on the markers.
 
+## Live Demo
+You can view the live version of this website here:  
+🔗 [My Portfolio Website](https://amreshsharma01.github.io/calgary-permits-map/)
+
 ## Project Visual Walkthrough
 ![Project Walkthrough](visual_walkthrough.png)
 
