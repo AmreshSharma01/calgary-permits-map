@@ -6,7 +6,7 @@ This project is a geoweb application built using Leaflet.js that visualizes Calg
 
 ## Live Demo
 You can view the live version of this website here:  
-🔗 [My Portfolio Website](https://amreshsharma01.github.io/calgary-permits-map/)
+🔗 [Calgary Permits Map](https://amreshsharma01.github.io/calgary-permits-map/)
 
 ## Project Visual Walkthrough
 ![Project Walkthrough](visual_walkthrough.png)
