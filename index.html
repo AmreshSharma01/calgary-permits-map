@@ -79,6 +79,9 @@
   // Initialize map
   var mapCenter = [51.0617, -114.1015];
   var map = L.map('map').setView(mapCenter, 12);
+  var MAPBOX_ACCESS_TOKEN =
+  "pk.eyJ1IjoiYW1yZXNoLXNoYXJtYSIsImEiOiJjbThmZ2t0OWIwYmozMmpweXR5cW1yaGRhIn0.HKm5v8-8ts-CFZfu5lgRvA";
+  L.mapbox.accessToken = MAPBOX_ACCESS_TOKEN;
 
   // Add OpenStreetMap base layer
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
