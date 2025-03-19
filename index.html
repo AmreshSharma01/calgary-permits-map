@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Calgary Permits Map</title>
+  <title>Calgary Permits & Traffic Incidents</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <!-- Leaflet CSS -->
@@ -12,6 +12,8 @@
   <!-- MarkerCluster CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <!-- Mapbox CSS -->
+  <link href='https://api.mapbox.com/mapbox.js/v3.3.1/mapbox.css' rel='stylesheet' />
   
   <style>
     body { margin: 0; padding: 0; }
@@ -26,20 +28,27 @@
       border-radius: 5px;
       box-shadow: 0 0 6px rgba(0,0,0,0.3);
     }
-    /*hover effect for the search button */
-  #searchBtn {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: background-color 0.3s ease;
-  }
-
-  #searchBtn:hover {
-    background-color: #0056b3;
-  }
+    #searchBtn, #toggleTrafficLayer {
+      margin-top: 10px;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+    #searchBtn { 
+      background-color: #007bff; 
+    }
+    #searchBtn:hover { 
+      background-color: #0056b3; 
+    }
+    #toggleTrafficLayer { 
+      background-color: #dc3545; 
+    }
+    #toggleTrafficLayer:hover { 
+      background-color: #c82333; 
+    }
   </style>
 </head>
 <body>
@@ -51,30 +60,45 @@
   <label for="endDate">End Date:</label>
   <input type="date" id="endDate" name="endDate">
   <br>
-  <button id="searchBtn">Search</button>
+  <button id="searchBtn">Search Permits</button>
+  <button id="toggleTrafficLayer">Toggle Traffic Incidents</button>
 </div>
 <div id="map"></div>
 
-<!-- Include the config file -->
-<script src="config.js"></script>
-
-<!-- Include Leaflet JS -->
+<!-- Leaflet, MarkerCluster, and Mapbox JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
-<!-- Include MarkerCluster JS -->
-<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+<script src='https://api.mapbox.com/mapbox.js/v3.3.1/mapbox.js'></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<!-- Configuration -->
+<script src="config.js"></script>
 
 <script>
-  // Set up the map view roughly between the two fixed markers.
+  // Initialize map
   var mapCenter = [51.0617, -114.1015];
   var map = L.map('map').setView(mapCenter, 12);
 
-  // Add the OpenStreetMap tile layer.
+  // Add OpenStreetMap base layer
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
+  map.attributionControl.addAttribution('Mapbox © <a href="https://www.mapbox.com/">Mapbox</a>');
+
+  // Initialize Mapbox traffic incidents layer
+  var trafficLayer = L.mapbox.styleLayer('mapbox://styles/amresh-sharma/cm8fkor1q00zs01sq3o5dh0nr'); //  STYLE URL
+
+
+  // Toggle traffic layer
+  document.getElementById("toggleTrafficLayer").addEventListener("click", function() {
+    if (map.hasLayer(trafficLayer)) {
+      map.removeLayer(trafficLayer);
+    } else {
+      map.addLayer(trafficLayer);
+    }
+  });
 
   // Define custom icons for the two initial markers.
   var calgaryIcon = L.icon({
